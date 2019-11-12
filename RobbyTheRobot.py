@@ -1,227 +1,237 @@
 import numpy as np
+from numpy.random import choice
 import math
-#import matplotlib
+import random
+import matplotlib.pyplot as plt
 
+#Q_matrix = np.random.randint(1, size=(100, 5))
 
-goal = np.array([[1,2,3],
-                 [4,5,6],
-                 [7,8,0]])
+#print (Q_matrix)
 
-def Is_Solvable(curr_list):
-    inversion = 0
-    for i in curr_list:
-        j = i
-        while (j < len(curr_list)):
-            if (j == 0):
-                break
-            elif (curr_list[i] > curr_list[j]):
-                inversion+=1
-                break
-            j+=1
-#    print(inversion)
-    if((inversion % 2)==0):
-        print(inversion)
-        return True
-    else:
-        return False
+class Robot:
+    def __init__(self, x=0, y=0, reward=0, collection=0): #constructor
+        self.x = x
+        self.y = y
+
+#Sensor Functions
+    def senseCurr(self, grid):
+        return grid[self.x][self.y]
+    def senseNorth(self, grid):
+        return grid[self.x][self.y+1]
+    def senseSouth(self, grid):
+        return grid[self.x][self.y-1]
+    def senseEast(self, grid):
+        return grid[self.x+1][self.y]
+    def senseWest(self, grid):
+        return grid[self.x-1][self.y]
+
+#Action Functions
+    def pickUp(self, grid): #pick up a can
+        if (grid[self.x][self.y] == 1):
+            grid[self.x][self.y] = 0
+            return True #if action was successful
+        else:
+            return False
+    def moveNorth(self, grid): #move north on the grid
+        if (self.senseNorth(grid) == 3):
+            return False
+        self.y += 1
+        return True #if action was successful
+    def moveSouth(self, grid): #move south on the grid
+        if (self.senseSouth(grid) == 3):
+            return False
+        self.y -= 1
+        return True #if action was successful
+    def moveEast(self, grid): #move east on the grid
+        if (self.senseEast(grid) == 3):
+            return False
+        self.x += 1
+        return True #if action was successful
+    def moveWest(self, grid): #move est on the grid
+        if (self.senseWest(grid) == 3):
+            return False
+        self.x -= 1
+        return True #if action was successful
     
+#Other Functions    
+    def convertState(self, grid): #represents state as a tuple
+        stateVector = (self.senseCurr(grid), self.senseNorth(grid), self.senseSouth(grid), self.senseEast(grid), self.senseWest(grid))
+        return stateVector
     
-
-#can_solve = False
-#while(can_solve != True):
-#    start = np.random.choice(9, size=(3, 3), replace=False)
-#    can_solve = Is_Solvable(start.flatten())
-
-start = np.array([[0,1,3], #Both algorithms work with this start
-                  [4,2,5],
-                  [7,8,6]])
-
-print("Goal:")
-print (goal)
-print("Start:")
-print (start)
-
-
-#goal = [1,2,3,4,5,6,7,8,0]
-#start = np.random.choice(9, 9, replace=False)
-
-def toString (matrix):
-    string = ""
-    for x in range(len(matrix)):
-        for j in range(len(matrix[x])):
-            string += str(matrix[x][j])
-        
-    return string
-
-#str_goal = convert_toString (goal)
-#str_start = convert_toString (start)
-#print(str_goal)
-#print(str_start)
-
-def Man_Heuristic (curr, goal):
-    h_value = 0
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            
-            for x in range(len(goal)): #loops through goal matrix
-                for y in range (len(goal[x])):
-                    if (goal[x][y] == curr[i][j]): #if a match in numbers
-                        h_value += (math.sqrt(abs(x-i) + abs(y-j))) #add the distance from goal index
-    return h_value
-
-def Euc_Heuristic (curr, goal):
-    h_value = 0
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            
-            for x in range(len(goal)): #loops through goal matrix
-                for y in range (len(goal[x])):
-                    if (goal[x][y] == curr[i][j]): #if a match in numbers
-                        h_value += ((abs(x-i) + abs(y-j))) #add the distance from goal index
-    return h_value
+    def selectAction(self, curr_state, Q_matrix, epsilon):
+        if (random.randint(1,100) <= (100*epsilon)):
+            action = random.randint(0,4)
+            return action
+        poss_actions = list() #list of possible action's q values
+        PU = Q_matrix[curr_state][0] #pick up q value
+        poss_actions.append(PU)
+        N = Q_matrix[curr_state][1] #move north q value
+        poss_actions.append(N)
+        S = Q_matrix[curr_state][2] #move south q value
+        poss_actions.append(S)
+        E = Q_matrix[curr_state][3] #move east q value
+        poss_actions.append(E)
+        W = Q_matrix[curr_state][4] #move west q value
+        poss_actions.append(W)
+        Max = max(poss_actions) #the max q value of all possible actions
+        if (Max == N):
+            action = 1
+        if (Max == PU):
+            action = 0
+        elif (Max == S):
+            action = 2
+        elif (Max == E):
+            action = 3
+        elif (Max == W):
+            action = 4
+        return action
     
-#my_value = Man_Heuristic (start, goal)
-#print(my_value)
-
-def move_up (matrix):
-    curr = np.copy(matrix)
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            if (curr[i][j]==0 and i>0):
-                temp = curr[i-1][j]
-                curr[i-1][j] = 0
-                curr[i][j] = temp
-                return curr
-    return curr
-
-def move_down (matrix):
-    curr = np.copy(matrix)
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            if (curr[i][j]==0 and i<2):
-                temp = curr[i+1][j]
-                curr[i+1][j] = 0
-                curr[i][j] = temp
-                return curr
-    return curr
-
-def move_right (matrix):
-    curr = np.copy(matrix)
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            if (curr[i][j]==0 and j<2):
-                temp = curr[i][j+1]
-                curr[i][j+1] = 0
-                curr[i][j] = temp
-                return curr
-    return curr
-
-def move_left (matrix):
-    curr = np.copy(matrix)
-    for i in range(len(curr)): #loops through current matrix
-        for j in range (len(curr[i])):
-            if (curr[i][j]==0 and j>0):
-                temp = curr[i][j-1]
-                curr[i][j-1] = 0
-                curr[i][j] = temp
-                return curr
-    return curr
-    
-#option1 = move_up(start)
-#option2 = move_down(start)
-#option3 = move_right(start)
-#option4 = move_left(start)
-
-#print("Options")
-#print(option1)
-#print(option2)
-#print(option3)
-#print(option4)
-
-def reconstruct_path(cameFrom, str_current):
-    total_path = {str_current}
-    for c in cameFrom:
-        current = cameFrom[c]
-        total_path.append(current)
-    return total_path
-
-
-def Best_First(start, goal):
-    steps = 0
-    current = start
-    while (steps < 100):
-        if (np.array_equal(current, goal)): #if at goal state
-            return 1         
-        options = [move_up(current), move_down(current), move_right(current), move_left(current)]
-        lowest = -1
-        curr_temp = current
-        for opt in options:
-            if (toString(opt) == toString(curr_temp)): #if the same as the current
-                continue
-            elif (lowest == -1):
-                current = opt
-                lowest = Euc_Heuristic(opt, goal)
+    def performAction (self, action, grid): #perform the action that was selected
+        if (action == 0): #Pick up
+            success = self.pickUp(grid)
+            if (success == True):
+                self.collection += 1
+                return 10
             else:
-                if (Euc_Heuristic(opt, goal) < lowest): 
-                    current = opt
-        print(current)
-        steps+=1 
-    print("too many steps")
-    return 0
-
-if (Best_First(start, goal)==1):
-    print("Solution found")
-    
-def A_Star (start, goal): 
-    closedSet = {} #states that have been evaluated
-    str_start = toString(start)
-    openSet = {str_start : start} #states that have been discovered but haven't been evaluated
-    cameFrom = {}
-    gScore = {str_start : 0}
-    fScore = {str_start : Man_Heuristic (start, goal)}
-    steps = 0
-    
-    while (len(openSet) > 0):
-        if (steps > 99): #limit the number of steps
-            #empty_set = {}
-            print("too many steps")
-            #return empty_set
-            return 0
-        lowest = -1
-        #print("start looking at openSet")
-        for s in openSet: #finds the state with the lowest fscore
-            if (lowest == -1):
-                current = openSet[s]
-                lowest = fScore[toString(openSet[s])]
+                return -1
+        elif (action == 1): #move North
+            success = self.moveNorth(grid)
+            if (success == True):
+                return 0
             else:
-                if (fScore[toString(openSet[s])] < lowest): 
-                    current = openSet[s]           
-        print(current)
-        if (np.array_equal(current, goal)): #It reached the goal state
-            #print("It works")
-            #return reconstruct_path(cameFrom, toString(current))
-            return 1
+                return -5
+        elif (action == 2): #move South
+            success = self.moveSouth(grid)
+            if (success == True):
+                return 0
+            else:
+                return -5
+        elif (action == 3): #move East
+            success = self.moveEast(grid)
+            if (success == True):
+                return 0
+            else:
+                return -5
+        elif (action == 4): #move West
+            success = self.moveWest(grid)
+            if (success == True):
+                return 0
+            else:
+                return -5
         
-        del openSet[toString(current)]
-        closedSet[toString(current)] = current
+    def Episode (self, grid, Q_matrix, epsilon): 
+        M = 200 #number of reps
+        n = 0.2 #learning rate
+        y = 0.9 
+        i = 0 #starting rep
+        while (i < M):
+            curr_state = self.convertState(grid)
+            if curr_state not in Q_matrix: #if first time seeing state then add to Q_matrrix
+                Q_matrix[curr_state] = np.zeros(5)
+            action = self.selectAction(curr_state, Q_matrix, epsilon)
+            reward = self.performAction(action, grid)
+            self.reward += reward
+            new_state = self.convertState(grid)
+            if new_state not in Q_matrix: #if first time seeing state then add to Q_matrrix
+                Q_matrix[new_state] = np.zeros(5)
+            Q_matrix[curr_state][action] = Q_matrix[curr_state][action] + n*(reward + y * max(Q_matrix[new_state]) - Q_matrix[curr_state][action])
+            i+=1
+            
+    def Train (self, Q_matrix):
+        N = 10000 #number of reps for training
+        k = 0 #starting rep
+        epsilon = 0.1 #greedy action selection
+        reward_list = list()
+        while (k < N):
+            grid = np.random.randint(2, size=(12, 12)) #creates grid
+            for i, g in enumerate(grid):
+                for j, gr in enumerate(grid[i]):
+                    if (j == 0 or j == 11 or i == 0 or i == 11):
+                        grid[i][j] = 3
+            self.x = random.randint(1,10)
+            self.y = random.randint(1,10)
+#            print ("Before:")
+#            print (grid)
+            self.collection = 0
+            self.reward = 0
+            self.Episode (grid, Q_matrix, epsilon)
+#            print ("After:")
+#            print (grid)
+            print ("Cans Collected:")
+            print (self.collection)
+            print ("Total Reward:")
+            print (self.reward)
+            print ("Points lost:")
+            lost = ((self.collection * 10) - self.reward)
+            print (lost)
+            print ("Iteration:")
+            print (k)
+            k+=1
+            if ((N-k) % 50 == 0): #every 50 reps reduce the epsilon value by .001
+                epsilon -= 0.001
+                reward_list.append(self.reward)
+        print ("Average Reward(Training):")
+        print (sum(reward_list)/(N/50))
+        plt.plot(reward_list)
+        fig = plt.figure()
+        plt.show()
         
-        options = [move_up(current), move_down(current), move_right(current), move_left(current)] #possible neighbors
+    def testEpisode (self, grid, Q_matrix, epsilon):
+        M = 200 #number of reps
+        i = 0 #starting rep
+        while (i < M):
+            curr_state = self.convertState(grid)
+            action = self.selectAction(curr_state, Q_matrix, epsilon)
+            reward = self.performAction(action, grid)
+            self.reward += reward
+            i+=1
+                
+    def Test (self, Q_matrix):
+        N = 1000 #number of reps for testing
+        k = 0 #starting rep
+        epsilon = 0.1 #greedy action selection
+        reward_list = list()
+        while (k < N):
+            grid = np.random.randint(2, size=(12, 12)) #creates grid
+            for i, g in enumerate(grid):
+                for j, gr in enumerate(grid[i]):
+                    if (j == 0 or j == 11 or i == 0 or i == 11):
+                        grid[i][j] = 3
+            self.x = random.randint(1,10)
+            self.y = random.randint(1,10)
+            self.collection = 0
+            self.reward = 0
+            self.testEpisode (grid, Q_matrix, epsilon)
+            reward_list.append(self.reward)
+            k+=1
+        print ("Average Reward(Test):")
+        print (sum(reward_list)/N)
+        plt.plot(reward_list)
+        fig = plt.figure()
+        plt.show()
         
-        for opt in options: #loops through the four possible neighbors that can be taken
-            if (toString(opt) == toString(current)): #if the same as the current
-                continue
-            if (toString(opt) in closedSet): #if I have already evaluated this state
-                continue
-            opt_gScore = (gScore[toString(current)] + 1)
-            if (toString(opt) not in openSet): #discovered a new state
-                openSet[toString(opt)] = opt
-            elif (opt_gScore >= gScore[toString(opt)]):
-                continue
-            cameFrom[toString(opt)] = toString(current)
-            gScore[toString(opt)] = opt_gScore #calculates gscore
-            fScore[toString(opt)] = gScore[toString(opt)] + Man_Heuristic(opt, goal) #calculates fscore
-        steps+=1
         
-if(A_Star(start, goal)==1):
-    print("Solution found")
-   
+        
+Q_matrix = {}
+
+#print (Q_matrix)    
+
+Robby = Robot()
+
+#index = Robby.convertState()
+
+#print(Robby.x)
+#print(Robby.y)
+#print(index)
+Robby.Train(Q_matrix) #trains Robby
+Robby.Test(Q_matrix) #tests Robby
+#print (Q_matrix)
+
+#print (Robby.x)
+#print (Robby.y)
+#print (Robby.reward)
+
+
+
+    
+
